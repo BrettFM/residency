@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaxBird — Residency Day Tracker</title>
+<style>
+:root {
+  --navy: #1a2744; --gold: #c9a84c; --gold-dk: #9a7520;
+  --green: #1a7a3c; --amber: #b8860b; --red: #c0392b;
+  --text: #1a1a2e; --muted: #6b7280;
+  --bg: #f4f6f9; --bg-alt: #eef1f5;
+  --card: #ffffff; --border: #d1d9e0;
+  --shadow: 0 1px 4px rgba(0,0,0,0.10);
+  --shadow-hi: 0 6px 20px rgba(0,0,0,0.13);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+.header { background: var(--navy); border-bottom: 3px solid var(--gold); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.header h1 { font-size: 1.4rem; color: var(--gold); display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.btn { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 600; transition: all .15s; text-decoration: none; display: inline-block; }
+.btn-gold { background: var(--gold); color: var(--navy); }
+.btn-gold:hover { background: var(--gold-dk); color: #fff; }
+.btn-secondary { background: var(--bg-alt); color: var(--muted); border: 1px solid var(--border); }
+.btn-secondary:hover { background: #e2e8f0; color: var(--text); }
+.btn-danger { background: rgba(192,57,43,.1); color: var(--red); border: 1px solid rgba(192,57,43,.3); }
+.btn-danger:hover { background: rgba(192,57,43,.2); }
+.btn-sm { padding: 4px 10px; font-size: .78rem; }
+.sync-status { font-size: .72rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+.sync-ok { background: #d4edda; color: #155724; }
+.sync-saving { background: #fff3cd; color: #856404; }
+.sync-err { background: #f8d7da; color: #721c24; }
+.sync-offline { background: #e2e3e5; color: #495057; }
+.toolbar { display: flex; gap: 12px; padding: 14px 24px; background: var(--bg-alt); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+.toolbar label { font-size: .72rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .05em; }
+.toolbar select { background: #fff; border: 1px solid var(--border); padding: 7px 10px; border-radius: 6px; font-size: .9rem; }
+.wrap { padding: 22px 24px; max-width: 1100px; margin: 0 auto; }
+.section-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 8px 0 14px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 16px; margin-bottom: 28px; }
+.state-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); transition: transform .15s, box-shadow .15s; cursor: pointer; }
+.state-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hi); border-color: var(--gold); }
+.state-card .sc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.state-card .sc-name { font-size: 1.15rem; font-weight: 700; }
+.state-card .sc-sub { font-size: .72rem; color: var(--muted); }
+.badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.badge-domicile { background: #e0f2fe; color: #075985; }
+.badge-safe { background: #dcfce7; color: #166534; }
+.badge-warn { background: #fef9c3; color: #854d0e; }
+.badge-over { background: #fee2e2; color: #991b1b; }
+.sc-days { font-size: 2.1rem; font-weight: 800; margin: 6px 0 2px; }
+.sc-target { font-size: .8rem; color: var(--muted); margin-bottom: 12px; }
+.progress { height: 10px; background: var(--bg-alt); border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.progress > div { height: 100%; border-radius: 6px; transition: width .4s; }
+.p-safe { background: var(--green); } .p-warn { background: var(--amber); } .p-over { background: var(--red); }
+.sc-foot { font-size: .76rem; margin-top: 10px; font-weight: 600; }
+.table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+th { background: #f1f5f9; color: var(--muted); padding: 10px 14px; text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; border-bottom: 2px solid var(--border); }
+td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f8fafc; }
+.src-tag { font-size: .66rem; padding: 2px 7px; border-radius: 10px; background: var(--bg-alt); color: var(--muted); font-weight: 600; }
+.empty { text-align: center; padding: 50px 20px; color: var(--muted); }
+.empty .icon { font-size: 2.6rem; margin-bottom: 10px; }
+/* modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--card); border-radius: 12px; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-radius: 12px 12px 0 0; }
+.modal-header h2 { font-size: 1.05rem; font-weight: 700; }
+.modal-close { background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; background: #f8fafc; border-radius: 0 0 12px 12px; flex-wrap: wrap; }
+.form-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+.form-group input, .form-group select { background: #fff; border: 1px solid var(--border); padding: 9px 11px; border-radius: 6px; font-size: .9rem; font-family: inherit; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,168,76,.2); }
+.note { font-size: .76rem; color: var(--muted); margin-top: 4px; }
+.field-note { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+.summary-bar { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
+.stat { flex: 1; min-width: 140px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); }
+.stat .label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.stat .value { font-size: 1.5rem; font-weight: 800; color: var(--gold-dk); margin-top: 3px; }
+.stat .sub { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+@media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } .wrap { padding: 16px 12px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1><span>🦅</span> TaxBird</h1>
+  <div class="header-actions">
+    <span id="syncStatus" class="sync-status sync-offline">○ Local only</span>
+    <button class="btn btn-secondary btn-sm" onclick="openSetupModal()">⚙ States</button>
+    <button class="btn btn-secondary btn-sm" onclick="openSyncModal()">☁ Sync</button>
+    <button class="btn btn-secondary btn-sm" onclick="openReportModal()">📄 Report</button>
+    <button class="btn btn-gold" onclick="openStayModal()">+ Add Stay</button>
+  </div>
+</div>
+
+<div class="toolbar">
+  <label>Tax Year</label>
+  <select id="yearSelect" onchange="changeYear()"></select>
+  <label style="margin-left:12px">Travel days count toward</label>
+  <select id="ruleSelect" onchange="changeRule()">
+    <option value="travel">Destination state (conservative)</option>
+    <option value="home">Home / domicile state</option>
+  </select>
+</div>
+
+<div class="wrap">
+  <div class="summary-bar" id="summaryBar"></div>
+  <div class="section-title">Residency Status — <span id="yearLabel"></span></div>
+  <div class="cards" id="stateCards"></div>
+  <div class="section-title">All Stays — <span id="yearLabel2"></span></div>
+  <div id="staysTable"></div>
+</div>
+
+<!-- Add/Edit Stay Modal -->
+<div class="modal-overlay" id="stayModal">
+  <div class="modal">
+    <div class="modal-header"><h2 id="stayModalTitle">Add Stay</h2><button class="modal-close" onclick="closeModal('stayModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>State / Location</label>
+        <select id="stayState"></select>
+        <div class="field-note">Add more states in the ⚙ States panel.</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Arrival Date</label><input type="date" id="stayStart"></div>
+        <div class="form-group"><label>Departure Date</label><input type="date" id="stayEnd"></div>
+      </div>
+      <div class="form-group"><label>Note (optional)</label><input type="text" id="stayNote" placeholder="e.g. Family visit, business trip"></div>
+      <div class="note" id="stayDayPreview"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="stayDeleteBtn" style="display:none">Delete</button>
+      <button class="btn btn-secondary" onclick="closeModal('stayModal')">Cancel</button>
+      <button class="btn btn-gold" onclick="saveStay()">Save Stay</button>
+    </div>
+  </div>
+</div>
+
+<!-- States Setup Modal -->
+<div class="modal-overlay" id="setupModal">
+  <div class="modal">
+    <div class="modal-header"><h2>States & Thresholds</h2><button class="modal-close" onclick="closeModal('setupModal')">✕</button></div>
+    <div class="modal-body" id="setupBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('setupModal')">Close</button>
+      <button class="btn btn-gold" onclick="openAddStateForm()">+ Add State</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sync Modal -->
+<div class="modal-overlay" id="syncModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><h2>☁ GitHub Sync</h2><button class="modal-close" onclick="closeModal('syncModal')">✕</button></div>
+    <div class="modal-body">
+      <p class="note" style="margin-bottom:14px">Your data is stored as <code>taxbird-data.json</code> in your GitHub repo. Enter a personal access token with <strong>repo</strong> scope to sync across devices.</p>
+      <div class="form-group">
+        <label>GitHub Token</label>
+        <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx">
+        <div class="field-note">GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → check <strong>repo</strong></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Owner</label><input type="text" id="ghOwner" placeholder="BrettFM"></div>
+        <div class="form-group"><label>Repo</label><input type="text" id="ghRepo" placeholder="residency"></div>
+      </div>
+      <div id="syncTestResult" class="note"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="disconnectSync()">Disconnect</button>
+      <button class="btn btn-secondary" onclick="closeModal('syncModal')">Cancel</button>
+      <button class="btn btn-gold" onclick="testAndSaveSync()">Test &amp; Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <div class="modal-header"><h2>📄 Year Report</h2><button class="modal-close" onclick="closeModal('reportModal')">✕</button></div>
+    <div class="modal-body" id="reportBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn btn-secondary" onclick="window.print()">🖨 Print / PDF</button>
+      <button class="btn btn-gold" onclick="closeModal('reportModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA_FILE = 'taxbird-data.json';
+const US_STATES = ["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming","International / Outside US"];
+
+const SEED = { version:1, settings:{ partialDayRule:'travel', currentTaxYear:2026 },
+  states:[ {id:'NV',name:'Nevada',domicile:true,target:183,thresholdType:'min'},
+           {id:'CA',name:'California',domicile:false,threshold:183,thresholdType:'max'} ],
+  stays:[] };
+
+// ---------- STATE ----------
+let data = loadLocal();
+let editingStayId = null;
+
+function loadLocal() {
+  const s = localStorage.getItem('taxbird');
+  if (s) { try { return JSON.parse(s); } catch(e){} }
+  return JSON.parse(JSON.stringify(SEED));
+}
+function persist() {
+  localStorage.setItem('taxbird', JSON.stringify(data));
+  scheduleSave();
+}
+
+// ---------- SYNC (GitHub Contents API) ----------
+function getSyncCfg() {
+  return { token: localStorage.getItem('gh_token')||'', owner: localStorage.getItem('gh_owner')||'', repo: localStorage.getItem('gh_repo')||'' };
+}
+function setSyncStatus(s) {
+  const el = document.getElementById('syncStatus'); if (!el) return;
+  const map = { synced:['✓ Synced','sync-ok'], saving:['↑ Saving…','sync-saving'], loading:['↓ Loading…','sync-saving'], error:['⚠ Sync error','sync-err'], offline:['○ Local only','sync-offline'] };
+  const [t,c] = map[s]||map.offline; el.textContent=t; el.className='sync-status '+c;
+}
+function b64encode(str){ return btoa(unescape(encodeURIComponent(str))); }
+function b64decode(str){ return decodeURIComponent(escape(atob(str.replace(/\n/g,'')))); }
+
+async function loadFromRepo() {
+  const { token, owner, repo } = getSyncCfg();
+  if (!token || !owner || !repo) return null;
+  setSyncStatus('loading');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${DATA_FILE}`, {
+      headers: { 'Authorization': `token ${token}`, 'Accept':'application/vnd.github.v3+json' }
+    });
+    if (res.status === 404) { setSyncStatus('synced'); return 'EMPTY'; }
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    const j = await res.json();
+    _fileSha = j.sha;
+    const content = b64decode(j.content);
+    setSyncStatus('synced');
+    return JSON.parse(content);
+  } catch(e) { console.error('Load error',e); setSyncStatus('error'); return null; }
+}
+
+let _fileSha = null, _saveTimer = null, _pending = false;
+async function saveToRepo() {
+  const { token, owner, repo } = getSyncCfg();
+  if (!token || !owner || !repo) return;
+  _pending = false; setSyncStatus('saving');
+  try {
+    // refresh sha to avoid conflicts
+    try {
+      const head = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${DATA_FILE}`, { headers:{ 'Authorization':`token ${token}` }});
+      if (head.ok) { const hj = await head.json(); _fileSha = hj.sha; } else if (head.status===404) { _fileSha = null; }
+    } catch(_){}
+    const body = { message:`Update ${DATA_FILE} — ${data.stays.length} stays`, content: b64encode(JSON.stringify(data,null,2)) };
+    if (_fileSha) body.sha = _fileSha;
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${DATA_FILE}`, {
+      method:'PUT', headers:{ 'Authorization':`token ${token}`, 'Accept':'application/vnd.github.v3+json', 'Content-Type':'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    const j = await res.json(); _fileSha = j.content?.sha || _fileSha;
+    setSyncStatus('synced');
+  } catch(e) { console.error('Save error',e); setSyncStatus('error'); showSyncError(); }
+}
+function scheduleSave() {
+  const { token, owner, repo } = getSyncCfg();
+  if (!token || !owner || !repo) return;
+  _pending = true; setSyncStatus('saving');
+  clearTimeout(_saveTimer); _saveTimer = setTimeout(saveToRepo, 1500);
+}
+function showSyncError() {
+  if (document.getElementById('syncErrBanner')) return;
+  const b = document.createElement('div'); b.id='syncErrBanner';
+  b.style.cssText='position:fixed;bottom:16px;right:16px;background:#c0392b;color:#fff;padding:10px 16px;border-radius:8px;font-size:.85rem;font-weight:600;z-index:999;display:flex;gap:10px;align-items:center;box-shadow:0 4px 12px rgba(0,0,0,.3)';
+  b.innerHTML='⚠ Sync failed — changes not saved. <button onclick="saveToRepo();this.parentNode.remove()" style="background:#fff;color:#c0392b;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-weight:700">Retry</button> <button onclick="this.parentNode.remove()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:1.1rem">&#x2715;</button>';
+  document.body.appendChild(b);
+}
+window.addEventListener('beforeunload', () => {
+  if (!_pending) return; clearTimeout(_saveTimer);
+  const { token, owner, repo } = getSyncCfg(); if (!token||!owner||!repo) return;
+  try {
+    const body = { message:`Update ${DATA_FILE}`, content: b64encode(JSON.stringify(data,null,2)) };
+    if (_fileSha) body.sha = _fileSha;
+    const x = new XMLHttpRequest();
+    x.open('PUT', `https://api.github.com/repos/${owner}/${repo}/contents/${DATA_FILE}`, false);
+    x.setRequestHeader('Authorization', `token ${token}`);
+    x.setRequestHeader('Content-Type','application/json');
+    x.send(JSON.stringify(body));
+  } catch(e){}
+});
+
+// ---------- DAY MATH ----------
+function dayMs(){ return 86400000; }
+function parseD(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function fmtD(dt){ return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function yearBounds(year){ return { jan1:new Date(year,0,1), dec31:new Date(year,11,31) }; }
+function totalDaysInYear(year){ const {jan1,dec31}=yearBounds(year); return Math.round((dec31-jan1)/dayMs())+1; }
+function daysElapsedInYear(year){
+  const {jan1,dec31}=yearBounds(year); const now=new Date(); now.setHours(0,0,0,0);
+  if (now < jan1) return 0; if (now > dec31) return totalDaysInYear(year);
+  return Math.round((now-jan1)/dayMs())+1;
+}
+// Days of a stay that fall within the given tax year, applying the partial-day rule.
+function stayDaysInYear(stay, year) {
+  const {jan1,dec31}=yearBounds(year);
+  let s=parseD(stay.start), e=parseD(stay.end);
+  if (e<s) [s,e]=[e,s];
+  const clampS = s<jan1?jan1:s, clampE = e>dec31?dec31:e;
+  if (clampE<clampS) return 0;
+  let days = Math.round((clampE-clampS)/dayMs())+1; // inclusive
+  // "home" rule: arrival & departure days count toward home/domicile, not destination
+  if (data.settings.partialDayRule==='home') {
+    // subtract endpoints only if the actual endpoint falls within the year
+    if (s>=jan1 && s<=dec31) days--;        // arrival day
+    if (e>=jan1 && e<=dec31 && e.getTime()!==s.getTime()) days--; // departure day
+    if (days<0) days=0;
+  }
+  return days;
+}
+// Aggregate per-state day counts for a year. Domicile = remainder of elapsed year.
+function computeYear(year) {
+  const away = {}; let awayTotal = 0;
+  data.states.filter(s=>!s.domicile).forEach(s=>away[s.id]=0);
+  // also tally states that may not be in config but appear in stays
+  data.stays.forEach(st=>{
+    const d = stayDaysInYear(st, year);
+    if (d<=0) return;
+    if (!(st.state in away)) away[st.state]=0;
+    away[st.state]+=d;
+  });
+  Object.values(away).forEach(v=>awayTotal+=v);
+  const dom = data.states.find(s=>s.domicile);
+  const elapsed = daysElapsedInYear(year);
+  const domDays = dom ? Math.max(0, elapsed - awayTotal) : 0;
+  return { away, awayTotal, domDays, elapsed, domicile: dom };
+}
+
+// ---------- RENDER ----------
+function stateName(id){ const s=data.states.find(x=>x.id===id); return s?s.name:id; }
+function statusFor(days, threshold) {
+  const r = days/threshold;
+  if (r>=1) return 'over'; if (r>=0.85) return 'warn'; return 'safe';
+}
+function render() {
+  const year = data.settings.currentTaxYear;
+  document.getElementById('yearLabel').textContent = year;
+  document.getElementById('yearLabel2').textContent = year;
+  document.getElementById('ruleSelect').value = data.settings.partialDayRule;
+  const c = computeYear(year);
+
+  // summary
+  const sb = document.getElementById('summaryBar');
+  const intl = c.away['International / Outside US'] || 0;
+  sb.innerHTML = `
+    <div class="stat"><div class="label">Days Elapsed</div><div class="value">${c.elapsed}</div><div class="sub">of ${totalDaysInYear(year)} in ${year}</div></div>
+    <div class="stat"><div class="label">${c.domicile?c.domicile.name:'Domicile'} Days</div><div class="value">${c.domDays}</div><div class="sub">${c.domicile?('target '+c.domicile.target+'+'):''}</div></div>
+    <div class="stat"><div class="label">Days Away</div><div class="value">${c.awayTotal}</div><div class="sub">across ${Object.values(c.away).filter(v=>v>0).length} states</div></div>
+    <div class="stat"><div class="label">International</div><div class="value">${intl}</div><div class="sub">days outside US</div></div>`;
+
+  // cards
+  const cards = document.getElementById('stateCards');
+  let html = '';
+  // domicile card
+  if (c.domicile) {
+    const pct = Math.min(100, Math.round(c.domDays/c.domicile.target*100));
+    const ok = c.domDays >= c.domicile.target;
+    const remaining = Math.max(0, c.domicile.target - c.domDays);
+    html += `<div class="state-card" onclick="openStateDetail('${c.domicile.id}')">
+      <div class="sc-top"><div><div class="sc-name">${c.domicile.name}</div><div class="sc-sub">Domicile · ${c.domicile.target}+ day target</div></div>
+      <span class="badge ${ok?'badge-safe':'badge-warn'}">${ok?'On Track':'Below Target'}</span></div>
+      <div class="sc-days">${c.domDays}</div><div class="sc-target">days established (${pct}% of target)</div>
+      <div class="progress"><div class="${ok?'p-safe':'p-warn'}" style="width:${pct}%"></div></div>
+      <div class="sc-foot" style="color:${ok?'var(--green)':'var(--amber)'}">${ok?'✓ Target met':remaining+' more days needed'}</div></div>`;
+  }
+  // away states with a max threshold
+  data.states.filter(s=>!s.domicile).forEach(s=>{
+    const days = c.away[s.id]||0; const thr = s.threshold||183;
+    const st = statusFor(days, thr); const pct = Math.min(100, Math.round(days/thr*100));
+    const remaining = Math.max(0, thr - days);
+    const badge = st==='over'?'badge-over':st==='warn'?'badge-warn':'badge-safe';
+    const label = st==='over'?'Over Limit':st==='warn'?'Approaching':'Safe';
+    const foot = st==='over' ? `⚠ ${days-thr+1} days over the ${thr}-day limit`
+               : `${remaining} days left before ${thr}-day limit`;
+    html += `<div class="state-card" onclick="openStateDetail('${s.id}')">
+      <div class="sc-top"><div><div class="sc-name">${s.name}</div><div class="sc-sub">${thr}-day limit</div></div>
+      <span class="badge ${badge}">${label}</span></div>
+      <div class="sc-days">${days}</div><div class="sc-target">days present (${pct}% of limit)</div>
+      <div class="progress"><div class="p-${st}" style="width:${pct}%"></div></div>
+      <div class="sc-foot" style="color:${st==='over'?'var(--red)':st==='warn'?'var(--amber)':'var(--green)'}">${foot}</div></div>`;
+  });
+  cards.innerHTML = html;
+
+  // stays table
+  renderStays(year);
+}
+function renderStays(year) {
+  const rows = data.stays
+    .filter(s=>stayDaysInYear(s, year)>0)
+    .sort((a,b)=>parseD(b.start)-parseD(a.start));
+  const wrap = document.getElementById('staysTable');
+  if (!rows.length) { wrap.innerHTML = `<div class="empty"><div class="icon">🗓️</div><div>No stays logged for ${year}.</div><div style="margin-top:8px"><button class="btn btn-gold btn-sm" onclick="openStayModal()">+ Add your first stay</button></div></div>`; return; }
+  let h = `<div class="table-wrap"><table><thead><tr><th>State / Location</th><th>Arrival</th><th>Departure</th><th>Days</th><th>Source</th><th></th></tr></thead><tbody>`;
+  rows.forEach(s=>{
+    h += `<tr>
+      <td><strong>${stateName(s.state)}</strong>${s.note?`<div style="font-size:.72rem;color:var(--muted)">${s.note}</div>`:''}</td>
+      <td>${fmtD(parseD(s.start))}</td><td>${fmtD(parseD(s.end))}</td>
+      <td><strong>${stayDaysInYear(s,year)}</strong></td>
+      <td><span class="src-tag">${s.source||'manual'}</span></td>
+      <td><button class="btn btn-secondary btn-sm" onclick="openStayModal(${s.id})">Edit</button></td></tr>`;
+  });
+  h += `</tbody></table></div>`;
+  wrap.innerHTML = h;
+}
+
+// ---------- YEAR / RULE ----------
+function populateYears() {
+  const sel = document.getElementById('yearSelect');
+  const years = new Set([2024,2025,2026, data.settings.currentTaxYear]);
+  data.stays.forEach(s=>{ years.add(parseD(s.start).getFullYear()); years.add(parseD(s.end).getFullYear()); });
+  const arr = [...years].sort((a,b)=>b-a);
+  sel.innerHTML = arr.map(y=>`<option value="${y}">${y}</option>`).join('');
+  sel.value = data.settings.currentTaxYear;
+}
+function changeYear(){ data.settings.currentTaxYear = +document.getElementById('yearSelect').value; persist(); render(); }
+function changeRule(){ data.settings.partialDayRule = document.getElementById('ruleSelect').value; persist(); render(); }
+
+// ---------- STAY MODAL ----------
+function populateStateSelect(sel) {
+  // configured states first, then full US list
+  const configured = data.states.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  const others = US_STATES.filter(n=>!data.states.some(s=>s.name===n)).map(n=>`<option value="${n}">${n}</option>`).join('');
+  sel.innerHTML = configured + (others?`<optgroup label="Other states">${others}</optgroup>`:'');
+}
+function openStayModal(id) {
+  editingStayId = id || null;
+  populateStateSelect(document.getElementById('stayState'));
+  const del = document.getElementById('stayDeleteBtn');
+  if (id) {
+    const s = data.stays.find(x=>x.id===id);
+    document.getElementById('stayModalTitle').textContent = 'Edit Stay';
+    document.getElementById('stayState').value = s.state;
+    document.getElementById('stayStart').value = s.start;
+    document.getElementById('stayEnd').value = s.end;
+    document.getElementById('stayNote').value = s.note||'';
+    del.style.display='inline-block'; del.onclick = ()=>deleteStay(id);
+  } else {
+    document.getElementById('stayModalTitle').textContent = 'Add Stay';
+    document.getElementById('stayStart').value=''; document.getElementById('stayEnd').value=''; document.getElementById('stayNote').value='';
+    del.style.display='none';
+  }
+  updateStayPreview();
+  document.getElementById('stayModal').classList.add('open');
+}
+['stayStart','stayEnd'].forEach(id=>document.addEventListener('input',e=>{ if(e.target.id===id) updateStayPreview(); }));
+function updateStayPreview() {
+  const s=document.getElementById('stayStart').value, e=document.getElementById('stayEnd').value;
+  const el=document.getElementById('stayDayPreview'); if(!s||!e){el.textContent='';return;}
+  const tmp={start:s,end:e}; const d=stayDaysInYear(tmp, parseD(s).getFullYear());
+  el.textContent = `This stay counts as ${d} day${d===1?'':'s'} (per current travel-day rule).`;
+}
+function saveStay() {
+  const state=document.getElementById('stayState').value;
+  const start=document.getElementById('stayStart').value, end=document.getElementById('stayEnd').value;
+  const note=document.getElementById('stayNote').value.trim();
+  if (!state||!start||!end) { alert('Please choose a state and both dates.'); return; }
+  if (parseD(end)<parseD(start)) { alert('Departure date is before arrival date.'); return; }
+  if (editingStayId) {
+    const s=data.stays.find(x=>x.id===editingStayId); Object.assign(s,{state,start,end,note});
+  } else {
+    const nid = data.stays.reduce((m,s)=>Math.max(m,s.id),0)+1;
+    data.stays.push({ id:nid, state, start, end, note, source:'manual' });
+  }
+  persist(); populateYears(); render(); closeModal('stayModal');
+}
+function deleteStay(id) {
+  if (!confirm('Delete this stay?')) return;
+  data.stays = data.stays.filter(s=>s.id!==id);
+  persist(); render(); closeModal('stayModal');
+}
+
+// ---------- STATE DETAIL (reuse report modal) ----------
+function openStateDetail(stateId) {
+  const year=data.settings.currentTaxYear;
+  const stays = data.stays.filter(s=>s.state===stateId && stayDaysInYear(s,year)>0).sort((a,b)=>parseD(a.start)-parseD(b.start));
+  const total = stays.reduce((m,s)=>m+stayDaysInYear(s,year),0);
+  let h = `<h3 style="margin-bottom:6px">${stateName(stateId)} — ${year}</h3><p class="note" style="margin-bottom:14px">${total} total days across ${stays.length} stay(s).</p>`;
+  if (!stays.length) h += `<p class="note">No stays recorded.</p>`;
+  else {
+    h += `<div class="table-wrap"><table><thead><tr><th>Arrival</th><th>Departure</th><th>Days</th><th>Note</th><th></th></tr></thead><tbody>`;
+    stays.forEach(s=>{ h+=`<tr><td>${fmtD(parseD(s.start))}</td><td>${fmtD(parseD(s.end))}</td><td><strong>${stayDaysInYear(s,year)}</strong></td><td>${s.note||'—'}</td><td><button class="btn btn-secondary btn-sm" onclick="closeModal('reportModal');openStayModal(${s.id})">Edit</button></td></tr>`; });
+    h += `</tbody></table></div>`;
+  }
+  document.getElementById('reportBody').innerHTML = h;
+  document.querySelector('#reportModal .modal-header h2').textContent = stateName(stateId);
+  document.getElementById('reportModal').classList.add('open');
+}
+
+// ---------- STATES SETUP ----------
+function renderSetup() {
+  let h = `<p class="note" style="margin-bottom:14px">Your domicile state collects the remaining days of the year automatically. Other states track a maximum day limit.</p>`;
+  data.states.forEach(s=>{
+    h += `<div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <strong>${s.name}</strong>
+        ${s.domicile?'<span class="badge badge-domicile">Domicile</span>':`<button class="btn btn-danger btn-sm" onclick="removeState('${s.id}')">Remove</button>`}
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>${s.domicile?'Minimum target (days)':'Maximum limit (days)'}</label>
+        <input type="number" value="${s.domicile?s.target:s.threshold}" onchange="updateThreshold('${s.id}',this.value)">
+      </div></div>`;
+  });
+  document.getElementById('setupBody').innerHTML = h;
+}
+function updateThreshold(id,val) {
+  const s=data.states.find(x=>x.id===id); val=+val||0;
+  if (s.domicile) s.target=val; else s.threshold=val;
+  persist(); render();
+}
+function removeState(id) {
+  if (!confirm('Remove this tracked state? Existing stays for it remain but it won\'t show a status card.')) return;
+  data.states = data.states.filter(s=>s.id!==id);
+  persist(); renderSetup(); render();
+}
+function openAddStateForm() {
+  const name = prompt('State name (must match a US state, or "International / Outside US"):');
+  if (!name) return;
+  const match = US_STATES.find(n=>n.toLowerCase()===name.trim().toLowerCase());
+  if (!match) { alert('Not a recognized state name.'); return; }
+  if (data.states.some(s=>s.name===match)) { alert('Already tracked.'); return; }
+  const id = match.replace(/[^A-Za-z]/g,'').slice(0,4).toUpperCase();
+  data.states.push({ id, name:match, domicile:false, threshold:183, thresholdType:'max' });
+  persist(); renderSetup(); render();
+}
+function openSetupModal(){ renderSetup(); document.getElementById('setupModal').classList.add('open'); }
+
+// ---------- REPORT ----------
+function openReportModal() {
+  const year=data.settings.currentTaxYear; const c=computeYear(year);
+  document.querySelector('#reportModal .modal-header h2').textContent='📄 '+year+' Report';
+  let h = `<h3 style="margin-bottom:10px">Full Year Summary — ${year}</h3>`;
+  h += `<div class="table-wrap" style="margin-bottom:18px"><table><thead><tr><th>State / Location</th><th>Days</th><th>Type</th><th>Status</th></tr></thead><tbody>`;
+  if (c.domicile) h += `<tr><td><strong>${c.domicile.name}</strong></td><td><strong>${c.domDays}</strong></td><td>Domicile (${c.domicile.target}+ target)</td><td>${c.domDays>=c.domicile.target?'On track':'Below target'}</td></tr>`;
+  data.states.filter(s=>!s.domicile).forEach(s=>{ const d=c.away[s.id]||0; const st=statusFor(d,s.threshold||183); h+=`<tr><td><strong>${s.name}</strong></td><td><strong>${d}</strong></td><td>Limit ${s.threshold||183}</td><td>${st==='over'?'OVER LIMIT':st==='warn'?'Approaching':'Safe'}</td></tr>`; });
+  // unconfigured states that have stays
+  Object.keys(c.away).filter(id=>!data.states.some(s=>s.id===id)).forEach(id=>{ h+=`<tr><td>${stateName(id)}</td><td><strong>${c.away[id]}</strong></td><td>—</td><td>—</td></tr>`; });
+  h += `</tbody></table></div>`;
+  h += `<h3 style="margin-bottom:10px">Full Year Detail</h3>`;
+  const stays = data.stays.filter(s=>stayDaysInYear(s,year)>0).sort((a,b)=>parseD(a.start)-parseD(b.start));
+  h += `<div class="table-wrap"><table><thead><tr><th>State</th><th>Arrival</th><th>Departure</th><th>Days</th><th>Note</th></tr></thead><tbody>`;
+  stays.forEach(s=>{ h+=`<tr><td>${stateName(s.state)}</td><td>${fmtD(parseD(s.start))}</td><td>${fmtD(parseD(s.end))}</td><td>${stayDaysInYear(s,year)}</td><td>${s.note||''}</td></tr>`; });
+  h += `</tbody></table></div>`;
+  document.getElementById('reportBody').innerHTML = h;
+  document.getElementById('reportModal').classList.add('open');
+}
+function exportCSV() {
+  const year=data.settings.currentTaxYear;
+  const stays = data.stays.filter(s=>stayDaysInYear(s,year)>0).sort((a,b)=>parseD(a.start)-parseD(b.start));
+  let csv = 'State/Location,Arrival,Departure,Days,Source,Note\n';
+  stays.forEach(s=>{ csv += `"${stateName(s.state)}",${s.start},${s.end},${stayDaysInYear(s,year)},${s.source||'manual'},"${(s.note||'').replace(/"/g,'""')}"\n`; });
+  const c=computeYear(year);
+  csv += '\nSUMMARY\n';
+  if (c.domicile) csv += `"${c.domicile.name} (domicile)",${c.domDays} days,target ${c.domicile.target}\n`;
+  data.states.filter(s=>!s.domicile).forEach(s=>{ csv += `"${s.name}",${c.away[s.id]||0} days,limit ${s.threshold||183}\n`; });
+  const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=`taxbird-${year}.csv`; a.click();
+}
+
+// ---------- SYNC MODAL ----------
+function openSyncModal() {
+  const { token, owner, repo } = getSyncCfg();
+  document.getElementById('ghToken').value=token;
+  document.getElementById('ghOwner').value=owner||'BrettFM';
+  document.getElementById('ghRepo').value=repo||'residency';
+  document.getElementById('syncTestResult').textContent='';
+  document.getElementById('syncModal').classList.add('open');
+}
+async function testAndSaveSync() {
+  const token=document.getElementById('ghToken').value.trim();
+  const owner=document.getElementById('ghOwner').value.trim();
+  const repo=document.getElementById('ghRepo').value.trim();
+  const r=document.getElementById('syncTestResult');
+  if(!token||!owner||!repo){ r.textContent='Please fill all three fields.'; r.style.color='#c00'; return; }
+  r.textContent='Testing…'; r.style.color='#856404';
+  try {
+    const res=await fetch(`https://api.github.com/repos/${owner}/${repo}`,{ headers:{'Authorization':`token ${token}`}});
+    if(!res.ok) throw new Error('HTTP '+res.status+' — check token scope (repo) and owner/repo.');
+    localStorage.setItem('gh_token',token); localStorage.setItem('gh_owner',owner); localStorage.setItem('gh_repo',repo);
+    r.textContent='✓ Connected! Loading…'; r.style.color='#155724';
+    const loaded = await loadFromRepo();
+    if (loaded===null) throw new Error('Connected, but could not read data file. Local data NOT pushed.');
+    if (loaded==='EMPTY') { await saveToRepo(); }
+    else if (loaded.stays && (loaded.stays.length || !data.stays.length) &&
+             confirm(`Found ${loaded.stays.length} stays in the repo. Load them? (Cancel to push your current local data instead)`)) {
+      data = loaded; localStorage.setItem('taxbird', JSON.stringify(data));
+      populateYears(); render();
+    } else { await saveToRepo(); }
+    setSyncStatus('synced'); setTimeout(()=>closeModal('syncModal'),800);
+  } catch(e){ r.textContent='✗ '+e.message; r.style.color='#c00'; setSyncStatus('error'); }
+}
+function disconnectSync() {
+  if(!confirm('Disconnect sync? Local data stays on this device.')) return;
+  localStorage.removeItem('gh_token'); localStorage.removeItem('gh_owner'); localStorage.removeItem('gh_repo');
+  setSyncStatus('offline'); closeModal('syncModal');
+}
+
+// ---------- UTIL ----------
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
+
+// ---------- INIT ----------
+populateYears(); render();
+(async () => {
+  const { token, owner, repo } = getSyncCfg();
+  if (!token||!owner||!repo) { setSyncStatus('offline'); return; }
+  const loaded = await loadFromRepo();
+  if (loaded && loaded!=='EMPTY') { data=loaded; localStorage.setItem('taxbird',JSON.stringify(data)); populateYears(); render(); }
+  // poll for changes from other devices
+  setInterval(async ()=>{
+    if (_pending) return;
+    const latest = await loadFromRepo();
+    if (latest && latest!=='EMPTY' && JSON.stringify(latest)!==JSON.stringify(data)) {
+      data=latest; localStorage.setItem('taxbird',JSON.stringify(data)); populateYears(); render();
+    }
+  }, 30000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "settings": {
+    "partialDayRule": "travel",
+    "currentTaxYear": 2026
+  },
+  "states": [
+    { "id": "NV", "name": "Nevada", "domicile": true, "target": 183, "thresholdType": "min" },
+    { "id": "CA", "name": "California", "domicile": false, "threshold": 183, "thresholdType": "max" }
+  ],
+  "stays": []
+}
