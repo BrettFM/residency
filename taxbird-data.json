@@ -8,5 +8,17 @@
     { "id": "NV", "name": "Nevada", "domicile": true, "target": 183, "thresholdType": "min" },
     { "id": "CA", "name": "California", "domicile": false, "threshold": 183, "thresholdType": "max" }
   ],
-  "stays": []
+  "stays": [
+    { "id": 1, "state": "CA", "start": "2026-01-22", "end": "2026-01-25", "note": "Birthday weekend — Solvang, Los Olivos, Santa Ynez wineries", "source": "calendar" },
+    { "id": 2, "state": "CA", "start": "2026-01-31", "end": "2026-02-02", "note": "Banning (Dad's Memorial); Irvine service on drive home", "source": "calendar" },
+    { "id": 3, "state": "Oregon", "start": "2026-02-20", "end": "2026-02-20", "note": "Alaska Air LAS→Portland, same-day continue to Reno", "source": "calendar" },
+    { "id": 4, "state": "International / Outside US", "start": "2026-02-28", "end": "2026-03-12", "note": "Cancún + Tulum (Encantada)", "source": "calendar" },
+    { "id": 5, "state": "Florida", "start": "2026-03-12", "end": "2026-03-17", "note": "Orlando / Kissimmee", "source": "calendar" },
+    { "id": 6, "state": "CA", "start": "2026-04-27", "end": "2026-05-01", "note": "Banning + Aliso Viejo / Newport / Laguna", "source": "calendar" },
+    { "id": 7, "state": "International / Outside US", "start": "2026-05-01", "end": "2026-05-09", "note": "Cabo cruise, Ensenada port", "source": "calendar" },
+    { "id": 8, "state": "Texas", "start": "2026-05-10", "end": "2026-05-14", "note": "Houston", "source": "calendar" },
+    { "id": 9, "state": "Ohio", "start": "2026-05-14", "end": "2026-05-20", "note": "Cleveland / Chippewa Lake", "source": "calendar" },
+    { "id": 10, "state": "Washington", "start": "2026-07-01", "end": "2026-07-12", "note": "Walla Walla road trip", "source": "calendar" },
+    { "id": 11, "state": "International / Outside US", "start": "2026-09-01", "end": "2026-09-30", "note": "Italy + Mediterranean cruise", "source": "calendar" }
+  ]
 }
